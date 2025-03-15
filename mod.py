@@ -74,6 +74,18 @@ def inserimento_vettori ():
         vec[j] = vj
     return vec
 
+def inserimento_coppie ():
+    """
+    Permette di inserire in input un vettore linearizzato su xy speficiandone le tre componenti cartesiane.
+    """
+    vec = np.zeros(3)
+    coordinate = ['x', 'y']
+    for j in range(2):
+        vj = float(input(f"Componente {coordinate[j]}: "))
+        vec[j] = vj
+    vec[2] = 0
+    return vec
+
 def inserimento_particella ():
     """
     Permette di inserire in input una particella fra quelle preimpostate.
@@ -141,6 +153,7 @@ def avanzamento(E0, B0, x0, v0, particella, passi, N, grad):
     if N == 1: 
         x = np.zeros((passi, 3))
         v = np.zeros((passi, 3))
+        tempi = np.zeros(passi)
         x[0, :] = x0
         v[0, :] = v0
         for j in range(passi - 1):
@@ -152,11 +165,13 @@ def avanzamento(E0, B0, x0, v0, particella, passi, N, grad):
             f_lorentz = particella.q * (E0 + np.cross(v[j, :], B))  #forza di Lorentz
             v[j + 1, :] = v[j, :] + f_lorentz / particella.m * dt  #aggiornamento del vettore velocità
             x[j + 1, :] = v[j, :] * dt + x[j, :]  #passi di moto rettilineo uniforme
+            tempi[j] = dt #riempimento matrice dei tempi
 
      #Caso 2: simulazione multipla
     elif N > 1:  
         x = np.zeros((passi, N, 3))
         v = np.zeros((passi, N, 3))
+        tempi = np.zeros((passi, N))
         for i, v_init in enumerate(v0):
             x[0, i, :] = x0[i]
             v[0, i, :] = v_init
@@ -169,8 +184,9 @@ def avanzamento(E0, B0, x0, v0, particella, passi, N, grad):
                 f_lorentz = particella.q * (E0 + np.cross(v[j, i, :], B))  #forza di Lorentz (particella i-esima)
                 v[j + 1, i, :] = v[j, i, :] + f_lorentz / particella.m * dt  #aggiornamento del vettore velocità (particella i-esima)
                 x[j + 1, i, :] = v[j, i, :] * dt + x[j, i, :]  #passi di moto rettilineo uniforme (particella i-esima)
+                tempi[j,i] = dt #riempimento matrice dei tempi (particella i-esima)
 
-    return x, dt
+    return x, tempi
 
 #Rappresentazioni grafiche 
 
@@ -267,7 +283,7 @@ def grafico2d (tr, E, B0, particella, grad, dt):
 
     #rappresentazione della velocità netta (solo particella singola)
     if len(tr.shape) == 2:
-        vdrift = vel_drift(tr,dt)
+        vdrift = vel_drift(tr, dt)
         if np.linalg.norm(vdrift) != 0 :
             vx_pos = xmin + 0.05 * (xmax - xmin)
             vy_pos = ymin + 0.05 * (ymax - ymin)
@@ -340,30 +356,58 @@ def B_grad_3 (x) :
 
     return [0,0,Br]
 
+def plot_gradienti():
+    """
+    Mostra il valore del campo magnetico B(x) per i tre diversi tipi di gradiente implementati.
+    """
+    x = np.linspace(-3, 3, 100)  #intervallo ragionevole per x
+    B1 = [gradiente("1", xi)[2] for xi in x]
+    B2 = np.array([gradiente("2", xi)[2] for xi in x])
+    B3 = np.array([gradiente("3", xi)[2] for xi in x])
+    
+    plt.figure(figsize=(8, 5))
+    plt.plot(x, B1, label="B_grad_1(x)", color='blue')
+    plt.plot(x, B2, label="B_grad_2(x)", color='green')
+    plt.plot(x, B3, label="B_grad_3(x)", color='red')
+    
+    plt.xlabel("Posizione x [m]")
+    plt.ylabel("B(x) [T]")
+    plt.title("Andamento del campo B(x) per diversi gradienti")
+    plt.axhline(0, color='black', linestyle='-', linewidth=0.8)  # Linea orizzontale per B=0
+    plt.axvline(0, color='black', linestyle='-', linewidth=0.8)  # Linea verticale per x=0
+    plt.legend()
+    plt.show()
+
+
 #Generazione di parametri iniziali casuali
 
 def velocita_montecarlo(N):
     """
     Genera N velocità iniziali casuali per particelle. Ciascuna componente è compresa in un range
-    fra 10^3 m/s e +10^5 m/s con probabilità uniforme. La limitazione permette di mantenersi nel
+    fra -10^5 m/s e +10^5 m/s con probabilità uniforme. La limitazione permette di mantenersi nel
     regime non relativistico ed è adatta ai valori scelti nel modulo per le intensità di B ed E.
     La simulazione genera metà velocità positive e metà negative ma con le precedenti limitazioni in modulo.
+    Nota importante: la componente z delle velocità è inizializzata a 0 perché la simulazione è bidimensionale e un'eventuale
+    presenza di velocità parallele al campo magnetico cambierebbe la velocità del drift teorica. 
+    Per una trattazione più approfondita si veda il README alla sezione apposita. 
     -------------------------------------------
     Parametri:
     - N : numero dei vettori velocità inziale da generare
     """
-    numero_positive = N // 2 + (N % 2)  #perché N potrebbe essere dispari
-    numero_negative = N // 2 
-
-    vxpos = np.random.uniform(1e3, 1e5, numero_positive)
-    vxneg = np.random.uniform(-1e5, -1e3, numero_negative)
-    vx = np.concatenate((vxpos, vxneg))
-    vypos = np.random.uniform(1e3, 1e5, numero_positive)
-    vyneg = np.random.uniform(-1e5, -1e3, numero_negative)
-    vy = np.concatenate((vypos, vyneg))
-    vzpos = np.random.uniform(1e3, 1e5, numero_positive)
-    vzneg = np.random.uniform(-1e5, -1e3, numero_negative)
-    vz = np.concatenate((vzpos, vzneg))
+    #numero_positive = N // 2 + (N % 2)  #perché N potrebbe essere dispari
+    #numero_negative = N // 2 
+    #vxpos = np.random.uniform(1e3, 1e5, numero_positive)
+    #vxneg = np.random.uniform(-1e5, -1e3, numero_negative)
+    #vx = np.concatenate((vxpos, vxneg))
+    #vypos = np.random.uniform(1e3, 1e5, numero_positive)
+    #vyneg = np.random.uniform(-1e5, -1e3, numero_negative)
+    #vy = np.concatenate((vypos, vyneg))
+    #vzpos = np.random.uniform(1e3, 1e5, numero_positive)
+    #vzneg = np.random.uniform(-1e5, -1e3, numero_negative)
+    #vz = np.concatenate((vzpos, vzneg))
+    vx = np.random.uniform(-1e5, 1e5, N)
+    vy = np.random.uniform(-1e5, 1e5, N)
+    vz = np.zeros(N)
     array_v = np.column_stack((vx, vy, vz))
 
     return array_v
@@ -417,21 +461,27 @@ def vel_drift (tr, dt):
     iniziale e finale diviso il tempo netto dall'inizio alla fine del moto. 
     -------------------------------------------
     Parametri:
-    - tr : array tridimensionale dei vettori posizione (traiettoria)
+    - tr : matrice dei vettori posizione (traiettoria)
+    - dt : matrice degli intervalli temporali
     -------------------------------------------
     Resistuisce:
     - v : vettore velocità di drift
     """
-    passi = tr.shape[0]
-    delta_t = np.sum(dt)
-    delta_x = tr[-1]-tr[0]
-    v = delta_x/delta_t
+    if len(dt.shape) == 1: #caso di singola particella con dt array
+        delta_t = np.sum(dt)
+        delta_x = tr[-1]-tr[0]
+        v = delta_x/delta_t
+
+    else: #caso di N particelle con dt matrice
+        delta_t = np.sum(dt, axis=0)  
+        delta_x = tr[-1] - tr[0]  
+        v = delta_x / delta_t[:, None]
 
     return v
 
 # Grafico di distribuzione delle velocità
 
-def istogramma_vdrift(tr, dt, E, B, vel_teo):
+def istogramma_vdrift(tr, dt, E, B, vel_teo, particella):
     """
     Rappresenta un istogramma che mostra la distribuzione delle velocità di drift tenendo conto della loro
     media e deviazione standard.
@@ -442,6 +492,7 @@ def istogramma_vdrift(tr, dt, E, B, vel_teo):
     - E : char che identifica un tipo di campo elettrico per il sottotitolo
     - B : char che identifica un tipo di campo magnetico per il sottotitolo
     - vel_teo : array velocità teorica [m/s]
+    - particella : elemento della classe omonima
     """
     plt.figure(figsize=(10, 6))
     vel = vel_drift(tr, dt)
@@ -474,7 +525,8 @@ def istogramma_vdrift(tr, dt, E, B, vel_teo):
     sottotitolo = f"{descrizioni_E[E]}; {descrizioni_B[B]}"
     plt.suptitle(sottotitolo, fontsize=12, color="gray")
 
-    plt.xlabel('Velocità di deriva (m/s)')
+    N = dt.shape[1]
+    plt.xlabel(f'Velocità di deriva (m/s) di {N} {particella.plurale}')
     plt.ylabel('Densità di probabilità')
     plt.title('Distribuzione della velocità di deriva')
     plt.legend()
@@ -504,17 +556,13 @@ def teorica_grad (tr, particella, grad):
     - particella : elemento della classe omonima
     - grad : char che identifica il tipo di gradiente
     """
-
-    posizione_mediana = tr.shape[0]//2
-    #print(posizione_mediana)
-    x_media = tr[posizione_mediana, :, :]
-    x_precedente = tr[posizione_mediana-1, :, :]
-    velocita = []
-    for xi in x_media:
-        B_medio = gradiente(grad, xi[0])[2]
-        dt = 0.0001*periodo_larmor(particella, B_medio)
-        velocita.append((x_media - x_precedente) / dt)
-    velocita = np.array(velocita) #ritrasformo in array perché prima non funzionava veniva letto come lista
+    posizione_mediana = tr.shape[0] // 2  #indice del valore centrale della traiettoria
+    x_media = tr[posizione_mediana, :, 0]  
+    x_precedente = tr[posizione_mediana - 1, :, 0]  
+    B_mediano = np.array([gradiente(grad, xi)[2] for xi in x_media])
+    dt = np.array([0.0001*periodo_larmor(particella, [0, 0, Bi]) for Bi in B_mediano])
+    v_mediana_x = (x_media - x_precedente) / dt 
+    v_mediana_y = (tr[posizione_mediana, :, 1] - tr[posizione_mediana - 1, :, 1]) / dt
 
     #Derivate prime che compaiono nella formula della velocità
     if grad == "1":
@@ -523,13 +571,12 @@ def teorica_grad (tr, particella, grad):
         k = 0.02
     elif grad == "3":
         k = -0.0008
-        
-    # Stima della velocità perpendicolare media dalla simulazione
-    v_ortogonale_media =  np.mean(np.linalg.norm(velocita[:, :2], axis = 1))
 
-    y = (particella.m * v_ortogonale_media ** 2) / (2 * particella.q * B_medio ** 2)  
+    v_ortogonale_media = np.mean(np.sqrt(v_mediana_x**2 + v_mediana_y**2)) 
 
-    return [0, y * k, 0]
+    y = (particella.m * v_ortogonale_media ** 2) / (2 * particella.q * B_mediano ** 2)  
+
+    return [0, np.mean(y * k), 0]
 
 def teorica_both (tr, particella, grad, E0):
     """
@@ -539,18 +586,20 @@ def teorica_both (tr, particella, grad, E0):
     -------------------------------------------
     Parametri:
     - tr : array traiettoria
-    - dt : array dei tempi per il calcolo della v
     - particella : elemento della classe omonima
     - grad : char che identifica il tipo di gradiente
     - E0 : array campo elettrico [V/m]
     """
+
     posizione_mediana = tr.shape[0]//2
-    x_media = tr[posizione_mediana, :, :]
-    Bi = []
-    for xi in x_media:
-        Bi.append(gradiente(grad, xi[0]))
-    B_medio = [0,0,np.mean(Bi[2])]
-    v_soloexb = teorica_exb(E0, B_medio)
+    x_media = tr[posizione_mediana, :, 0]
+    B_mediano = np.array([gradiente(grad, xi) for xi in x_media])
+    B_medio_vettore = np.array([0, 0, np.mean(B_mediano[:, 2])]) 
+
+    v_soloexb = teorica_exb(E0, B_medio_vettore)
     v_solograd = teorica_grad(tr, particella, grad)
 
     return v_soloexb + v_solograd
+
+#plot della funzione dei gradienti per avere il grafico
+#plot_gradienti()

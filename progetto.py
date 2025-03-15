@@ -84,13 +84,11 @@ def funzioni(args):
             print('Inserire il vettore posizione iniziale x0 [m]: ')
             x0 = mod.inserimento_vettori()
             print('Inserire il vettore velocità iniziale v0 [m/s]: ')
-            v0 = mod.inserimento_vettori()
+            v0 = mod.inserimento_coppie()
             particella = mod.inserimento_particella()
             passi = int(input('Inserire il numero di passi N della simulazione: '))
             tr, dt = mod.avanzamento(E0, B0, x0, v0, particella, passi, 1, '0')
             mod.grafico2d (tr, E0, B0, particella, 0, dt)
-            print(mod.vel_drift(tr, dt))
-            print(np.cross(E0, B0) / np.linalg.norm(B0) ** 2)
 
         if args.multipla :
 
@@ -122,7 +120,7 @@ def funzioni(args):
 
         if args.statistica : 
             
-            N = 100 #campione adeguato di particelle
+            N = 300 #campione adeguato di particelle
             print(f'Studio statistico della velocità di drift su {N} particelle nei campi di default.')
             particella = mod.inserimento_particella()
             v0 = mod.velocita_montecarlo(N)
@@ -130,20 +128,20 @@ def funzioni(args):
             tr1, dt1 = mod.avanzamento(E_def, B_def, x0, v0, particella, 60000, N, '0')
             #mod.grafico2d (tr1, E_def, B_def, particella, 0, dt1)
             teorica = mod.teorica_exb(E_def, B_def)
-            mod.istogramma_vdrift(tr1, dt1, '1', '1', teorica)
+            mod.istogramma_vdrift(tr1, dt1, '1', '1', teorica, particella)
             while True:
                 risposta = input('Digitare 1 per continuare con la configurazione successiva, altro per uscire: ')
                 if (risposta=='1'):
                     tr2, dt2 = mod.avanzamento(E_def2, B_def, x0, v0, particella, 60000, N, '0')
                     #mod.grafico2d (tr2, E_def2, B_def, particella, 0, dt2)
                     teorica2 = mod.teorica_exb(E_def2, B_def)
-                    mod.istogramma_vdrift(tr2, dt2, '2', '1', teorica2)
+                    mod.istogramma_vdrift(tr2, dt2, '2', '1', teorica2, particella)
                     risposta2 = input('Digitare 1 per continuare con la configurazione successiva, altro per uscire: ')
                     if (risposta2=='1'):
                         tr3, dt3 = mod.avanzamento(E_def, B_def2, x0, v0, particella, 60000, N, '0')
                         #mod.grafico2d (tr3, E_def, B_def2, particella, 0, dt3)
                         teorica3 = mod.teorica_exb(E_def, B_def2)
-                        mod.istogramma_vdrift(tr3, dt3, '1', '2', teorica3)
+                        mod.istogramma_vdrift(tr3, dt3, '1', '2', teorica3, particella)
                         break
                     else:
                         break 
@@ -164,7 +162,7 @@ def funzioni(args):
             print('Inserire il vettore posizione iniziale x0 [m]: ')
             x0 = mod.inserimento_vettori()
             print('Inserire il vettore velocità iniziale v0 [m/s]: ')
-            v0 = mod.inserimento_vettori()
+            v0 = mod.inserimento_coppie()
             particella = mod.inserimento_particella()
             passi = int(input('Inserire il numero di passi N della simulazione: '))
             tr, dt = mod.avanzamento(E0, B0, x0, v0, particella, passi, 1, var)
@@ -195,7 +193,7 @@ def funzioni(args):
 
         if args.statistica : 
             
-            N = 75 #campione adeguato di particelle
+            N = 300 #campione adeguato di particelle
             print(f'Studio statistico della velocità di drift su {N} particelle nei campi di default.')
             particella = mod.inserimento_particella()
             v0 = mod.velocita_montecarlo(N)
@@ -203,20 +201,20 @@ def funzioni(args):
             tr1, dt1 = mod.avanzamento(E0, B0, x0, v0, particella, 60000, N, '1')
             #mod.grafico2d (tr1, E0, B0, particella, 1, dt1)
             teorica = mod.teorica_grad(tr1, particella, '1')
-            mod.istogramma_vdrift(tr1, dt1, '3', '31', teorica)
+            mod.istogramma_vdrift(tr1, dt1, '3', '31', teorica, particella)
             while True:
                 risposta = input('Digitare 1 per continuare con la configurazione successiva, altro per uscire: ')
                 if (risposta=='1'):
                     tr2, dt2 = mod.avanzamento(E0, B0, x0, v0, particella, 60000, N, '2')
                     #mod.grafico2d (tr2, E0, B0, particella, 2, dt2)
-                    teorica2 = mod.teorica_grad(tr2, dt2, particella, '2')
-                    mod.istogramma_vdrift(tr2, dt2, '3', '32', teorica2)
+                    teorica2 = mod.teorica_grad(tr2, particella, '2')
+                    mod.istogramma_vdrift(tr2, dt2, '3', '32', teorica2, particella)
                     risposta2 = input('Digitare 1 per continuare con la configurazione successiva, altro per uscire: ')
                     if (risposta2 =='1'):
                         tr3, dt3 = mod.avanzamento(E0, B0, x0, v0, particella, 60000, N, '3')
                         #mod.grafico2d (tr3, E0, B0, particella, 3, dt3)
-                        teorica3 = mod.teorica_grad(tr3, dt3, particella, '3')
-                        mod.istogramma_vdrift(tr3, dt3, '3', '33', teorica3)
+                        teorica3 = mod.teorica_grad(tr3, particella, '3')
+                        mod.istogramma_vdrift(tr3, dt3, '3', '33', teorica3, particella)
                         break
                     else:
                         break
@@ -235,12 +233,11 @@ def funzioni(args):
             var = mod.scelta_gradiente()
             Ex = float(input('Inserire la componente x del campo elettrico E [V/m]: '))
             Ey = float(input('Inserire la componente y del campo elettrico E [V/m]: '))
-            var = mod.scelta_gradiente()
             E0 = [Ex, Ey, 0]
             print('Inserire il vettore posizione iniziale x0 [m]: ')
             x0 = mod.inserimento_vettori()
             print('Inserire il vettore velocità iniziale v0 [m/s]: ')
-            v0 = mod.inserimento_vettori()
+            v0 = mod.inserimento_coppie()
             particella = mod.inserimento_particella()
             passi = int(input('Inserire il numero di passi N della simulazione: '))
             tr, dt = mod.avanzamento(E0, B0, x0, v0, particella, passi, 1, var)
@@ -274,7 +271,7 @@ def funzioni(args):
 
         if args.statistica : 
             
-            N = 75 #campione adeguato di particelle
+            N = 300 #campione adeguato di particelle
             print(f'Studio statistico della velocità di drift su {N} particelle nei campi di default.')
             particella = mod.inserimento_particella()
             v0 = mod.velocita_montecarlo(N)
@@ -282,20 +279,20 @@ def funzioni(args):
             tr1, dt1 = mod.avanzamento(E_def, B0, x0, v0, particella, 60000, N, '1')
             #mod.grafico2d (tr1, E_def, B0, particella, '1', dt1)
             teorica = mod.teorica_both(tr1, particella, '1', E_def)
-            mod.istogramma_vdrift(tr1, dt1, '1', '31', teorica)
+            mod.istogramma_vdrift(tr1, dt1, '1', '31', teorica, particella)
             while True:
                 risposta = input('Digitare 1 per continuare con la configurazione successiva, altro per uscire: ')
                 if (risposta=='1'):
                     tr2, dt2 = mod.avanzamento(E_def2, B0, x0, v0, particella, 60000, N, '2')
                     #mod.grafico2d (tr2, E_def2, B0, particella, '2', dt2)
                     teorica2 = mod.teorica_both(tr1, particella, '2', E_def2)
-                    mod.istogramma_vdrift(tr1, dt1, '2', '32', teorica2)
+                    mod.istogramma_vdrift(tr1, dt1, '2', '32', teorica2, particella)
                     risposta2 = input('Digitare 1 per continuare con la configurazione successiva, altro per uscire: ')
                     if (risposta2 =='1'):
                         tr3, dt3 = mod.avanzamento(E_def, B0, x0, v0, particella, 60000, N, '3')
                         #mod.grafico2d (tr3, E_def, B0, particella, '3', dt3)
                         teorica3 = mod.teorica_both(tr1, particella, '3', E_def)
-                        mod.istogramma_vdrift(tr3, dt3, '1', '33', teorica3)   
+                        mod.istogramma_vdrift(tr3, dt3, '1', '33', teorica3, particella)   
                         break
                     else:
                         break 
